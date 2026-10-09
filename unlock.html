@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap" rel="stylesheet">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PIN Code</title>
+  <style>
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      background: #000000;
+    }
+
+    main {
+      width: max-content;
+      max-width: calc(100vw - 32px);
+    }
+
+    main.transfer-active {
+      width: 100%;
+    }
+
+    .pin-screen {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .pin-screen[hidden],
+    .choice-screen[hidden] {
+      display: none;
+    }
+
+    .pin-controls {
+      position: relative;
+      flex: 0 0 196px;
+    }
+
+    .code {
+      display: flex;
+      position: relative;
+    }
+
+    .code.hidden {
+      visibility: hidden;
+    }
+
+    .code::before {
+      content: "ENTER PIN CODE";
+      position: absolute;
+      bottom: calc(100% + 20px);
+      left: 0;
+      color: #ffffff;
+      font-family: "Orbitron", sans-serif;
+      font-size: 18px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      white-space: nowrap;
+    }
+
+    .unlock-icon {
+      position: absolute;
+      top: 30px;
+      left: 78px;
+      display: none;
+      width: 40px;
+      height: 40px;
+      overflow: visible;
+      color: #ffffff;
+      filter: drop-shadow(0 0 5px rgba(0, 153, 255, 0.65));
+    }
+
+    .unlock-icon.visible {
+      display: block;
+    }
+
+    .unlock-label {
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: none;
+      width: 196px;
+      color: #34e01dad;
+      font-family: "Orbitron", sans-serif;
+      font-size: 20px;
+      text-align: center;
+      text-shadow: 0 0 8px rgba(0, 153, 255, 0.7);
+    }
+
+    .unlock-label.visible {
+      display: block;
+      animation: unlock-label-blink 0.3s ease-in-out 3;
+    }
+
+    @keyframes unlock-label-blink {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0;
+      }
+    }
+
+    .unlock-icon circle,
+    .unlock-icon path {
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.6;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .code input {
+      box-sizing: border-box;
+      width: 50px;
+      height: 65px;
+      border: 1.5px solid #ffffff;
+      background: #071320;
+      color: #e4f4ff;
+      font-size: 40px;
+      line-height: normal;
+      padding: 20px 0 0;
+      text-align: center;
+      outline: none;
+      caret-color: transparent;
+      border-radius: 2px;
+    }
+
+    .code input + input {
+      margin-left: -1.5px;
+      border-left-color: #949494;
+    }
+
+    .code input:focus {
+      border-color: #ffffff;
+      box-shadow: 0 0 8px #d6d6d6;
+      z-index: 1;
+    }
+
+    .keypad {
+      display: grid;
+      width: 100%;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin: 20px auto 0;
+    }
+
+    .keypad button {
+      width: 100%;
+      aspect-ratio: 1;
+      border: none;
+      border-radius: 3px;
+      background: #10457e;
+      color: #e4f4ff;
+      font-size: 25px;
+      font-family: "Orbitron", sans-serif;
+      cursor: pointer;
+      box-shadow: 0 0 5px rgba(0, 119, 255, 0.35);
+    }
+    
+    .keypad button:hover {
+      background-color: #113b68; 
+    }
+
+    .choice-screen {
+      width: min(440px, calc(100vw - 32px));
+      color: #66e470;
+      font: 16px Consolas, monospace;
+    }
+
+    .choice-screen.transferring {
+      display: grid;
+      width: 100%;
+      min-height: 100vh;
+      place-items: center;
+    }
+
+    .choice-screen.transferring h1,
+    .choice-screen.transferring #fileCommands {
+      display: none;
+    }
+
+    .choice-screen.transferring .transfer-panel {
+      width: min(600px, calc(100vw - 48px));
+      margin-top: 0;
+    }
+
+    .choice-screen h1 {
+      margin: 0 0 10px;
+      font-size: 20px;
+      font-weight: normal;
+    }
+
+    .file-command {
+      display: block;
+      width: 100%;
+      padding: 7px 0;
+      border: 0;
+      background: none;
+      color: #65d487;
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .file-command.selected {
+      color: #9deead;
+    }
+
+    .file-command:focus {
+      outline: none;
+    }
+
+    .transfer-panel {
+      margin-top: 24px;
+      padding: 7px;
+      background: #011269;
+      box-shadow: 0 0 12px rgba(139, 172, 255, 0.7);
+      color: #9ef4e0;
+      font-family: "Orbitron", sans-serif;
+      font-size: 10px;
+    }
+
+    .transfer-panel[hidden] {
+      display: none;
+    }
+
+    .transfer-heading {
+      margin: -7px -7px 20px;
+      padding: 7px;
+      background: #0026a3;
+      letter-spacing: 0.08em;
+    }
+
+    .transfer-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 92px;
+      gap: 16px;
+    }
+
+    .transfer-track,
+    .transfer-percent {
+      height: 48px;
+    }
+
+    .transfer-track {
+      overflow: hidden;
+      background: #050505;
+      margin: 0 18px;
+    }
+
+    .transfer-fill {
+      width: 0;
+      height: 100%;
+      background: #f2df58;
+    }
+
+    .transfer-percent {
+      display: grid;
+      place-items: center;
+      background: #f2df58;
+      color: #76551f;
+      font-size: 28px;
+      font-weight: bold;
+      font-family: "Orbitron", sans-serif;
+    }
+
+    .maze {
+      width: 135px;
+      height: 260px;
+      overflow: visible;
+      animation: maze-glow 1.2s ease-out infinite alternate;
+    }
+
+    .maze path {
+      fill: none;
+      stroke: #5062ff;
+      stroke-width: 5;
+      stroke-linejoin: round;
+    }
+
+    .maze.unlocked {
+      animation: maze-green-glow 1.2s ease-in infinite alternate;
+    }
+
+    .maze.unlocked path {
+      stroke: #83d66b;
+    }
+
+    .maze.wrong {
+      animation: maze-red-flash 1s ease-in infinite alternate;
+    }
+
+    .maze.wrong path {
+      stroke: #ff5555;
+    }
+
+    @keyframes maze-glow {
+      from {
+        filter:
+          drop-shadow(0 0 1px #65c2f8)
+          drop-shadow(0 0 3px #0077ff);
+      }
+      to {
+        filter:
+          drop-shadow(0 0 1px #0084ff)
+          drop-shadow(0 0 3px #0066ff)
+          drop-shadow(0 0 11px rgba(0, 17, 255, 0.925))
+          drop-shadow(0 0 1px rgb(6, 75, 202));
+      }
+    }
+
+    @keyframes maze-green-glow {
+      from {
+        filter:
+          drop-shadow(0 0 2px rgba(189, 255, 145, 0.85))
+          drop-shadow(0 0 8px rgba(91, 205, 71, 0.68))
+          drop-shadow(0 0 14px rgba(48, 255, 58, 0.4))
+          drop-shadow(0 0 1px rgba(0, 255, 13, 0.712));
+      }
+      to {
+        filter:
+          drop-shadow(0 0 1px rgba(153, 227, 112, 0.6))
+          drop-shadow(0 0 4px rgba(53, 255, 39, 0.4));
+      }
+    }
+
+    @keyframes maze-red-flash {
+      from {
+        filter:
+          drop-shadow(0 0 3px rgba(255, 94, 94, 0.95))
+          drop-shadow(0 0 12px rgba(255, 35, 35, 0.9))
+          drop-shadow(0 0 20px rgba(255, 0, 0, 0.849));
+      }
+      to {
+        filter:
+          drop-shadow(0 0 2px rgba(255, 112, 112, 0.75))
+          drop-shadow(0 0 7px rgba(255, 45, 45, 0.6));
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="pin-screen" id="pinScreen">
+      <section class="pin-controls">
+        <div class="code" aria-label="4桁のコード">
+          <input type="text" aria-label="1桁目" inputmode="numeric" maxlength="1" autofocus>
+          <input type="text" aria-label="2桁目" inputmode="numeric" maxlength="1">
+          <input type="text" aria-label="3桁目" inputmode="numeric" maxlength="1">
+          <input type="text" aria-label="4桁目" inputmode="numeric" maxlength="1">
+        </div>
+        <svg class="unlock-icon" viewBox="0 0 40 40" aria-hidden="true">
+          <circle cx="20" cy="20" r="15"></circle>
+          <path d="M13 20l5 5 10-13"></path>
+        </svg>
+        <span class="unlock-label" aria-live="polite">UNLOCK</span>
+        <div class="keypad" aria-label="数字テンキー">
+          <button type="button" data-digit="1">1</button>
+          <button type="button" data-digit="2">2</button>
+          <button type="button" data-digit="3">3</button>
+          <button type="button" data-digit="4">4</button>
+          <button type="button" data-digit="5">5</button>
+          <button type="button" data-digit="6">6</button>
+          <button type="button" data-digit="7">7</button>
+          <button type="button" data-digit="8">8</button>
+          <button type="button" data-digit="9">9</button>
+          <span></span>
+          <button class="zero" type="button" data-digit="0">0</button>
+        </div>
+      </section>
+      <svg class="maze" viewBox="-12 -12 164 284" aria-hidden="true">
+        <path d="M-10 -10H150V270H-10V-10Z M3 5H137V255H3V5Z M17 23H123V237H17V23Z M34 41H106V219H34V41Z M51 59H89V201H51V59Z M64 81H76V179H64V81Z"/>
+      </svg>
+    </section>
+    <section class="choice-screen" id="choiceScreen" hidden>
+      <h1>SELECT FILE:</h1>
+      <div id="fileCommands" role="menu" aria-label="データファイル">
+        <button class="file-command selected" type="button" role="menuitem">▶ file1</button>
+        <button class="file-command" type="button" role="menuitem">　file2</button>
+        <button class="file-command" type="button" role="menuitem">　全495の企業_サイバー攻撃_顧客情報.pdf</button>
+        <button class="file-command" type="button" role="menuitem">　妖怪ウォッチ覇道_プロトタイプ.nsp</button>
+      </div>
+      <section class="transfer-panel" id="transferPanel" aria-label="データ転送" hidden>
+        <h2 class="transfer-heading">DATA ENCRYPTED TRANSFER</h2>
+        <div class="transfer-row">
+          <div class="transfer-track" role="progressbar" aria-label="転送進捗" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="transfer-fill" id="transferFill"></div>
+          </div>
+          <output class="transfer-percent" id="transferPercent" aria-live="polite">0%</output>
+        </div>
+      </section>
+    </section>
+  </main>
+  <script>
+    const codeBoxes = [...document.querySelectorAll(".code input")];
+    const pinDigits = codeBoxes.map(() => "");
+    const maze = document.querySelector(".maze");
+    const codeDisplay = document.querySelector(".code");
+    const unlockIcon = document.querySelector(".unlock-icon");
+    const unlockLabel = document.querySelector(".unlock-label");
+    const pinScreen = document.getElementById("pinScreen");
+    const choiceScreen = document.getElementById("choiceScreen");
+    const main = document.querySelector("main");
+    const fileCommands = [...document.querySelectorAll(".file-command")];
+    const transferPanel = document.getElementById("transferPanel");
+    const transferTrack = transferPanel.querySelector('[role="progressbar"]');
+    const transferFill = document.getElementById("transferFill");
+    const transferPercent = document.getElementById("transferPercent");
+    const fileNames = ["file1", "file2", "全495の企業_サイバー攻撃_顧客情報.pdf", "妖怪ウォッチ覇道_プロトタイプ.nsp"];
+    const cursorMoveSound = new Audio("カーソル移動5.mp3");
+    cursorMoveSound.preload = "auto";
+    const wrongPinSound = new Audio("ビープ音4.mp3");
+    wrongPinSound.preload = "auto";
+    const transferCompleteSound = new Audio("conflict resolved.mp3");
+    transferCompleteSound.preload = "auto";
+    const correctPin = "3141";
+    let wrongPinTimeout;
+    let wrongPinDelayTimeout;
+    let wrongPinInProgress = false;
+    let unlockTimeout;
+    let unlockPending = false;
+    let choiceTimeout;
+    let selectedFile = 0;
+    let transferFrame;
+    let transferStartedAt;
+    let isTransferring = false;
+    let transferCompleteSoundTimeout;
+    const transferDuration = 10000;
+
+    function renderFileSelection() {
+      fileCommands.forEach((button, index) => {
+        button.classList.toggle("selected", index === selectedFile);
+        button.textContent = `${index === selectedFile ? "▶" : "　"} ${fileNames[index]}`;
+      });
+    }
+
+    function playCursorMoveSound() {
+      cursorMoveSound.currentTime = 0;
+      cursorMoveSound.play().catch((error) => {
+        console.warn("カーソル移動音を再生できませんでした。", error);
+      });
+    }
+
+    function playWrongPinSound() {
+      wrongPinSound.currentTime = 0;
+      wrongPinSound.play().catch((error) => {
+        console.warn("PINエラー音を再生できませんでした。", error);
+      });
+    }
+
+    function startTransfer() {
+      if (isTransferring) {
+        return;
+      }
+
+      cancelAnimationFrame(transferFrame);
+      clearTimeout(transferCompleteSoundTimeout);
+      isTransferring = true;
+      transferStartedAt = performance.now();
+      choiceScreen.classList.add("transferring");
+      main.classList.add("transfer-active");
+      transferPanel.hidden = false;
+      transferFill.style.width = "0%";
+      transferPercent.value = "0%";
+      transferPercent.textContent = "0%";
+      transferTrack.setAttribute("aria-valuenow", "0");
+      transferFrame = requestAnimationFrame(updateTransfer);
+    }
+
+    function updateTransfer(now) {
+      const elapsed = Math.min(now - transferStartedAt, transferDuration);
+      const firstPhaseDuration = transferDuration / 2;
+      const progress = elapsed <= firstPhaseDuration
+        ? (elapsed / firstPhaseDuration) * 0.75
+        : 0.75 + 0.25 * (1 - ((transferDuration - elapsed) / firstPhaseDuration) ** 2);
+      const percentage = Math.floor(progress * 100);
+      transferFill.style.width = `${percentage}%`;
+      transferPercent.value = `${percentage}%`;
+      transferPercent.textContent = `${percentage}%`;
+      transferTrack.setAttribute("aria-valuenow", String(percentage));
+
+      if (progress < 1) {
+        transferFrame = requestAnimationFrame(updateTransfer);
+      } else {
+        isTransferring = false;
+        transferCompleteSoundTimeout = setTimeout(() => {
+          transferCompleteSound.currentTime = 0;
+          transferCompleteSound.play().catch((error) => {
+            console.warn("転送完了音を再生できませんでした。", error);
+          });
+        }, 1000);
+      }
+    }
+
+    function checkPin() {
+      const enteredPin = pinDigits.join("");
+      if (enteredPin.length !== codeBoxes.length) {
+        return;
+      }
+
+      if (enteredPin === correctPin) {
+        if (!unlockPending && !unlockIcon.classList.contains("visible")) {
+          unlockPending = true;
+          choiceTimeout = setTimeout(() => {
+            if (pinDigits.join("") === correctPin) {
+              pinScreen.hidden = true;
+              choiceScreen.hidden = false;
+            }
+          }, 4000);
+          unlockTimeout = setTimeout(() => {
+            unlockPending = false;
+            if (pinDigits.join("") === correctPin) {
+              maze.classList.remove("wrong");
+              maze.classList.add("unlocked");
+              codeDisplay.classList.add("hidden");
+              unlockIcon.classList.add("visible");
+              unlockLabel.classList.add("visible");
+            }
+          }, 1000);
+        }
+        return;
+      }
+
+      clearTimeout(unlockTimeout);
+      clearTimeout(choiceTimeout);
+      unlockPending = false;
+      wrongPinInProgress = true;
+
+      clearTimeout(wrongPinDelayTimeout);
+      clearTimeout(wrongPinTimeout);
+      wrongPinDelayTimeout = setTimeout(() => {
+        maze.classList.remove("unlocked");
+        maze.classList.add("wrong");
+        playWrongPinSound();
+        wrongPinTimeout = setTimeout(() => {
+          maze.classList.remove("wrong");
+          pinDigits.fill("");
+          codeBoxes.forEach((box) => {
+            box.value = "";
+          });
+          wrongPinInProgress = false;
+          codeBoxes[0].focus();
+        }, 3900);
+      }, 1000);
+    }
+
+    function enterDigit(digit) {
+      if (wrongPinInProgress) {
+        return;
+      }
+
+      const nextIndex = pinDigits.findIndex((value) => value === "");
+      if (nextIndex !== -1) {
+        pinDigits[nextIndex] = digit;
+        codeBoxes[nextIndex].value = "*";
+        checkPin();
+        if (nextIndex < codeBoxes.length - 1) {
+          codeBoxes[nextIndex + 1].focus();
+        }
+      }
+    }
+
+    document.querySelectorAll("[data-digit]").forEach((button) => {
+      button.addEventListener("click", () => {
+        enterDigit(button.dataset.digit);
+        playCursorMoveSound();
+      });
+    });
+
+    fileCommands.forEach((button, index) => {
+      button.addEventListener("click", () => {
+        selectedFile = index;
+        renderFileSelection();
+        playCursorMoveSound();
+        startTransfer();
+      });
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (choiceScreen.hidden) {
+        return;
+      }
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+        playCursorMoveSound();
+        startTransfer();
+        return;
+      }
+
+      if (event.key === "ArrowDown") {
+        selectedFile = (selectedFile + 1) % fileCommands.length;
+      } else if (event.key === "ArrowUp") {
+        selectedFile = (selectedFile + fileCommands.length - 1) % fileCommands.length;
+      } else {
+        return;
+      }
+
+      event.preventDefault();
+      renderFileSelection();
+      fileCommands[selectedFile].focus();
+      playCursorMoveSound();
+    });
+
+    codeBoxes.forEach((box, index) => {
+      box.addEventListener("focus", () => {
+        box.select();
+      });
+
+      box.addEventListener("input", () => {
+        if (wrongPinInProgress) {
+          box.value = "";
+          return;
+        }
+
+        pinDigits[index] = box.value.replace(/\D/g, "").slice(-1);
+        box.value = pinDigits[index] ? "*" : "";
+        if (pinDigits[index]) {
+          playCursorMoveSound();
+        }
+        checkPin();
+        if (pinDigits[index] && index < codeBoxes.length - 1) {
+          codeBoxes[index + 1].focus();
+        }
+      });
+
+      box.addEventListener("keydown", (event) => {
+        if (wrongPinInProgress) {
+          event.preventDefault();
+          return;
+        }
+
+        if (event.key === "Backspace" && !pinDigits[index] && index > 0) {
+          codeBoxes[index - 1].focus();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
