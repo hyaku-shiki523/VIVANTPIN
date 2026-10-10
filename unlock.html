@@ -31,9 +31,47 @@
       gap: 32px;
     }
 
+    .insert-screen[hidden],
     .pin-screen[hidden],
-    .choice-screen[hidden] {
+    .choice-screen[hidden],
+    .disconnect-screen[hidden] {
       display: none;
+    }
+
+    .insert-screen {
+      width: min(440px, calc(100vw - 32px));
+      color: #66e470;
+      font: 16px Consolas, monospace;
+    }
+
+    .insert-message {
+      margin: 0 0 12px;
+    }
+
+    .insert-confirm {
+      display: block;
+      width: 100%;
+      padding: 4px 0;
+      border: 0;
+      background: none;
+      color: #9deead;
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .insert-confirm:focus {
+      outline: none;
+    }
+
+    .disconnect-screen {
+      width: min(440px, calc(100vw - 32px));
+      color: #66e470;
+      font: 16px Consolas, monospace;
+    }
+
+    .disconnect-screen p {
+      margin: 0;
     }
 
     .pin-controls {
@@ -94,7 +132,7 @@
 
     .unlock-label.visible {
       display: block;
-      animation: unlock-label-blink 0.3s ease-in-out 3;
+      animation: unlock-label-blink 0.2s ease-in-out 3;
     }
 
     @keyframes unlock-label-blink {
@@ -173,19 +211,19 @@
       font: 16px Consolas, monospace;
     }
 
-    .choice-screen.transferring {
+    .choice-screen.transferring:not([hidden]) {
       display: grid;
       width: 100%;
       min-height: 100vh;
       place-items: center;
     }
 
-    .choice-screen.transferring h1,
-    .choice-screen.transferring #fileCommands {
+    .choice-screen.transferring:not([hidden]) h1,
+    .choice-screen.transferring:not([hidden]) #fileCommands {
       display: none;
     }
 
-    .choice-screen.transferring .transfer-panel {
+    .choice-screen.transferring:not([hidden]) .transfer-panel {
       width: min(600px, calc(100vw - 48px));
       margin-top: 0;
     }
@@ -347,7 +385,11 @@
 </head>
 <body>
   <main>
-    <section class="pin-screen" id="pinScreen">
+    <section class="insert-screen" id="insertScreen">
+      <p class="insert-message">Please connect the USB to the PC.</p>
+      <button class="insert-confirm" id="insertConfirm" type="button" autofocus>▶ OK</button>
+    </section>
+    <section class="pin-screen" id="pinScreen" hidden>
       <section class="pin-controls">
         <div class="code" aria-label="4桁のコード">
           <input type="text" aria-label="1桁目" inputmode="numeric" maxlength="1" autofocus>
@@ -396,6 +438,9 @@
         </div>
       </section>
     </section>
+    <section class="disconnect-screen" id="disconnectScreen" aria-live="polite" hidden>
+      <p>Please disconnect the USB from the PC</p>
+    </section>
   </main>
   <script>
     const codeBoxes = [...document.querySelectorAll(".code input")];
@@ -404,8 +449,11 @@
     const codeDisplay = document.querySelector(".code");
     const unlockIcon = document.querySelector(".unlock-icon");
     const unlockLabel = document.querySelector(".unlock-label");
+    const insertScreen = document.getElementById("insertScreen");
+    const insertConfirm = document.getElementById("insertConfirm");
     const pinScreen = document.getElementById("pinScreen");
     const choiceScreen = document.getElementById("choiceScreen");
+    const disconnectScreen = document.getElementById("disconnectScreen");
     const main = document.querySelector("main");
     const fileCommands = [...document.querySelectorAll(".file-command")];
     const transferPanel = document.getElementById("transferPanel");
@@ -417,8 +465,13 @@
     cursorMoveSound.preload = "auto";
     const wrongPinSound = new Audio("ビープ音4.mp3");
     wrongPinSound.preload = "auto";
+    const processingSound = new Audio("processing (2).mp3");
+    processingSound.preload = "auto";
+    processingSound.loop = true;
     const transferCompleteSound = new Audio("conflict resolved.mp3");
     transferCompleteSound.preload = "auto";
+    const unlockSound = new Audio("unlocksound.mp3");
+    unlockSound.preload = "auto";
     const correctPin = "3141";
     let wrongPinTimeout;
     let wrongPinDelayTimeout;
@@ -430,8 +483,14 @@
     let transferFrame;
     let transferStartedAt;
     let isTransferring = false;
-    let transferCompleteSoundTimeout;
-    const transferDuration = 10000;
+    const transferDuration = 8100;
+
+    insertConfirm.addEventListener("click", () => {
+      playCursorMoveSound();
+      insertScreen.hidden = true;
+      pinScreen.hidden = false;
+      codeBoxes[0].focus();
+    });
 
     function renderFileSelection() {
       fileCommands.forEach((button, index) => {
@@ -460,7 +519,6 @@
       }
 
       cancelAnimationFrame(transferFrame);
-      clearTimeout(transferCompleteSoundTimeout);
       isTransferring = true;
       transferStartedAt = performance.now();
       choiceScreen.classList.add("transferring");
@@ -470,6 +528,10 @@
       transferPercent.value = "0%";
       transferPercent.textContent = "0%";
       transferTrack.setAttribute("aria-valuenow", "0");
+      processingSound.currentTime = 0;
+      processingSound.play().catch((error) => {
+        console.warn("転送中の音を再生できませんでした。", error);
+      });
       transferFrame = requestAnimationFrame(updateTransfer);
     }
 
@@ -489,12 +551,17 @@
         transferFrame = requestAnimationFrame(updateTransfer);
       } else {
         isTransferring = false;
-        transferCompleteSoundTimeout = setTimeout(() => {
-          transferCompleteSound.currentTime = 0;
-          transferCompleteSound.play().catch((error) => {
-            console.warn("転送完了音を再生できませんでした。", error);
-          });
-        }, 1000);
+        processingSound.pause();
+        processingSound.currentTime = 0;
+        transferCompleteSound.currentTime = 0;
+        transferCompleteSound.play().catch((error) => {
+          console.warn("転送完了音を再生できませんでした。", error);
+        });
+        setTimeout(() => {
+          choiceScreen.hidden = true;
+          disconnectScreen.hidden = false;
+          main.classList.remove("transfer-active");
+        }, 2500);
       }
     }
 
@@ -521,6 +588,10 @@
               codeDisplay.classList.add("hidden");
               unlockIcon.classList.add("visible");
               unlockLabel.classList.add("visible");
+              unlockSound.currentTime = 0;
+              unlockSound.play().catch((error) => {
+                console.warn("ロック解除音を再生できませんでした。", error);
+              });
             }
           }, 1000);
         }
