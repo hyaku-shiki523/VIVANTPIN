@@ -13,7 +13,12 @@
       margin: 0;
       display: grid;
       place-items: center;
-      background: #000000;
+      background-color: #050a07;
+      background-image:
+        radial-gradient(ellipse at center, rgba(16, 35, 20, 0.7), transparent 72%),
+        linear-gradient(rgba(75, 102, 79, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(75, 102, 79, 0.08) 1px, transparent 1px);
+      background-size: auto, 29px 29px, 29px 29px;
     }
 
     main {
@@ -31,47 +36,10 @@
       gap: 32px;
     }
 
-    .insert-screen[hidden],
     .pin-screen[hidden],
     .choice-screen[hidden],
-    .disconnect-screen[hidden] {
+    .message-screen[hidden] {
       display: none;
-    }
-
-    .insert-screen {
-      width: min(440px, calc(100vw - 32px));
-      color: #66e470;
-      font: 16px Consolas, monospace;
-    }
-
-    .insert-message {
-      margin: 0 0 12px;
-    }
-
-    .insert-confirm {
-      display: block;
-      width: 100%;
-      padding: 4px 0;
-      border: 0;
-      background: none;
-      color: #9deead;
-      font: inherit;
-      text-align: left;
-      cursor: pointer;
-    }
-
-    .insert-confirm:focus {
-      outline: none;
-    }
-
-    .disconnect-screen {
-      width: min(440px, calc(100vw - 32px));
-      color: #66e470;
-      font: 16px Consolas, monospace;
-    }
-
-    .disconnect-screen p {
-      margin: 0;
     }
 
     .pin-controls {
@@ -308,6 +276,75 @@
       font-family: "Orbitron", sans-serif;
     }
 
+    main.message-active {
+      display: grid;
+      width: 100%;
+      min-height: 100vh;
+      place-items: center;
+    }
+
+    .message-screen {
+      box-sizing: border-box;
+      display: grid;
+      grid-template-rows: 1.2fr auto 0.8fr;
+      width: min(545px, calc(100vw - 40px));
+      height: 280px;
+      padding: 24px;
+      border: 1px solid #146329;
+      background: #000803;
+      color: #e5f2e8;
+      font-family: "Yu Gothic UI", Meiryo, sans-serif;
+    }
+
+    .message-header {
+      align-self: end;
+      justify-self: center;
+      margin-bottom: 36px;
+      color: #78f78e;
+      font: bold 13px Consolas, monospace;
+      letter-spacing: 0.08em;
+    }
+
+    .message-content {
+      align-self: start;
+      justify-self: center;
+      max-width: 100%;
+      color: #e5f2e8;
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.8;
+      text-align: center;
+    }
+
+    .message-cursor {
+      content: "";
+      display: inline-block;
+      width: 5px;
+      height: 16px;
+      margin-left: 6px;
+      background: #69f58a;
+      vertical-align: -3px;
+      animation: message-cursor-blink 0.8s steps(2, start) infinite;
+    }
+
+    @keyframes message-cursor-blink {
+      to {
+        visibility: hidden;
+      }
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
     .maze {
       width: 135px;
       height: 260px;
@@ -385,11 +422,7 @@
 </head>
 <body>
   <main>
-    <section class="insert-screen" id="insertScreen">
-      <p class="insert-message">Please connect the USB to the PC.</p>
-      <button class="insert-confirm" id="insertConfirm" type="button" autofocus>▶ OK</button>
-    </section>
-    <section class="pin-screen" id="pinScreen" hidden>
+    <section class="pin-screen" id="pinScreen">
       <section class="pin-controls">
         <div class="code" aria-label="4桁のコード">
           <input type="text" aria-label="1桁目" inputmode="numeric" maxlength="1" autofocus>
@@ -423,10 +456,10 @@
     <section class="choice-screen" id="choiceScreen" hidden>
       <h1>SELECT FILE:</h1>
       <div id="fileCommands" role="menu" aria-label="データファイル">
-        <button class="file-command selected" type="button" role="menuitem">▶ file1</button>
-        <button class="file-command" type="button" role="menuitem">　file2</button>
-        <button class="file-command" type="button" role="menuitem">　全495の企業_サイバー攻撃_顧客情報.pdf</button>
-        <button class="file-command" type="button" role="menuitem">　妖怪ウォッチ覇道_プロトタイプ.nsp</button>
+        <button class="file-command selected" type="button" role="menuitem">▶ 別班員に関する調査.pdf</button>
+        <button class="file-command" type="button" role="menuitem">Revival_テロ部門の責任者及び今後のテロ計画.pdf</button>
+        <button class="file-command" type="button" role="menuitem">全495の企業_サイバー攻撃_顧客情報.pdf</button>
+        <button class="file-command" type="button" role="menuitem">Revival_従業員の献立表.pdf</button>
       </div>
       <section class="transfer-panel" id="transferPanel" aria-label="データ転送" hidden>
         <h2 class="transfer-heading">DATA ENCRYPTED TRANSFER</h2>
@@ -438,8 +471,14 @@
         </div>
       </section>
     </section>
-    <section class="disconnect-screen" id="disconnectScreen" aria-live="polite" hidden>
-      <p>Please disconnect the USB from the PC</p>
+    <section class="message-screen" id="messageScreen" hidden>
+      <header class="message-header">
+        <span>blue@walker</span>
+      </header>
+      <div class="message-content">
+        <span id="messageText"></span><span class="message-cursor" aria-hidden="true"></span>
+      </div>
+      <p class="visually-hidden" id="messageAnnouncement" aria-live="polite"></p>
     </section>
   </main>
   <script>
@@ -449,18 +488,18 @@
     const codeDisplay = document.querySelector(".code");
     const unlockIcon = document.querySelector(".unlock-icon");
     const unlockLabel = document.querySelector(".unlock-label");
-    const insertScreen = document.getElementById("insertScreen");
-    const insertConfirm = document.getElementById("insertConfirm");
     const pinScreen = document.getElementById("pinScreen");
     const choiceScreen = document.getElementById("choiceScreen");
-    const disconnectScreen = document.getElementById("disconnectScreen");
+    const messageScreen = document.getElementById("messageScreen");
+    const messageText = document.getElementById("messageText");
+    const messageAnnouncement = document.getElementById("messageAnnouncement");
     const main = document.querySelector("main");
     const fileCommands = [...document.querySelectorAll(".file-command")];
     const transferPanel = document.getElementById("transferPanel");
     const transferTrack = transferPanel.querySelector('[role="progressbar"]');
     const transferFill = document.getElementById("transferFill");
     const transferPercent = document.getElementById("transferPercent");
-    const fileNames = ["file1", "file2", "全495の企業_サイバー攻撃_顧客情報.pdf", "妖怪ウォッチ覇道_プロトタイプ.nsp"];
+    const fileNames = ["別班員に関する調査.pdf", "Revival_テロ部門の責任者及び今後のテロ計画.pdf", "全495の企業_サイバー攻撃_顧客情報.pdf", "Revival_従業員の献立表.pdf"];
     const cursorMoveSound = new Audio("カーソル移動5.mp3");
     cursorMoveSound.preload = "auto";
     const wrongPinSound = new Audio("ビープ音4.mp3");
@@ -472,7 +511,9 @@
     transferCompleteSound.preload = "auto";
     const unlockSound = new Audio("unlocksound.mp3");
     unlockSound.preload = "auto";
-    const correctPin = "3141";
+    const typingSound = new Audio("voice_sans.mp3");
+    typingSound.preload = "auto";
+    const correctPin = "5142";
     let wrongPinTimeout;
     let wrongPinDelayTimeout;
     let wrongPinInProgress = false;
@@ -483,14 +524,15 @@
     let transferFrame;
     let transferStartedAt;
     let isTransferring = false;
+    let isShowingMessage = false;
     const transferDuration = 8100;
-
-    insertConfirm.addEventListener("click", () => {
-      playCursorMoveSound();
-      insertScreen.hidden = true;
-      pinScreen.hidden = false;
-      codeBoxes[0].focus();
-    });
+    const bluewalkerMessages = [
+      "リバイバル社のデータシステムのハッキングに成功しました！",
+      "PIN CODEのおかげで、難航していたデータの抽出が容易になりました。ありがとうございます。",
+      "また、リバイバル社の人感センサーによる緊急システムの起動を阻止することはできましたが、またいつ発動するかわかりません。",
+      "こちらも最善を尽くしますが、万が一のときは十分周りをよく見て進んでください。",
+      "それではまた。"
+    ];
 
     function renderFileSelection() {
       fileCommands.forEach((button, index) => {
@@ -511,6 +553,52 @@
       wrongPinSound.play().catch((error) => {
         console.warn("PINエラー音を再生できませんでした。", error);
       });
+    }
+
+    function showBluewalkerMessage() {
+      if (isShowingMessage) {
+        return;
+      }
+
+      isShowingMessage = true;
+      choiceScreen.hidden = true;
+      messageScreen.hidden = false;
+      main.classList.remove("transfer-active");
+      main.classList.add("message-active");
+      typeBluewalkerMessage(0);
+    }
+
+    function typeBluewalkerMessage(messageIndex) {
+      if (messageIndex >= bluewalkerMessages.length) {
+        return;
+      }
+
+      messageText.textContent = "";
+      const characters = Array.from(bluewalkerMessages[messageIndex]);
+      let characterIndex = 0;
+
+      function typeNextCharacter() {
+        if (characterIndex < characters.length) {
+          messageText.textContent += characters[characterIndex];
+          typingSound.pause();
+          typingSound.currentTime = 0;
+          typingSound.play().catch((error) => {
+            if (error.name !== "AbortError") {
+              console.warn("メッセージ入力音を再生できませんでした。", error);
+            }
+          });
+          characterIndex += 1;
+          setTimeout(typeNextCharacter, 90);
+          return;
+        }
+
+        messageAnnouncement.textContent = bluewalkerMessages[messageIndex];
+        if (messageIndex + 1 < bluewalkerMessages.length) {
+          setTimeout(() => typeBluewalkerMessage(messageIndex + 1), 700);
+        }
+      }
+
+      typeNextCharacter();
     }
 
     function startTransfer() {
@@ -556,14 +644,12 @@
         transferCompleteSound.currentTime = 0;
         transferCompleteSound.play().catch((error) => {
           console.warn("転送完了音を再生できませんでした。", error);
+          showBluewalkerMessage();
         });
-        setTimeout(() => {
-          choiceScreen.hidden = true;
-          disconnectScreen.hidden = false;
-          main.classList.remove("transfer-active");
-        }, 2500);
       }
     }
+
+    transferCompleteSound.addEventListener("ended", showBluewalkerMessage, { once: true });
 
     function checkPin() {
       const enteredPin = pinDigits.join("");
